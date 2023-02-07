@@ -28,13 +28,15 @@ config = read_ini(sys.argv[1])
 
 
 img_path = config["DIR"]["image_dir"]
-# mask_path =config["DIR"]["mask_dir"]
+output_vis_path =config["DIR"]["output_vis_path"]
 checkpoint_path = config["DIR"]["checkpoint_path"]
 output_path = config["DIR"]["output_path"]
 
 scale = 20
 
 Path(output_path).mkdir(parents=True, exist_ok=True)
+Path(output_vis_path).mkdir(parents=True, exist_ok=True)
+
 
 assert os.path.isfile(checkpoint_path), "Checkpoint file not exist"
 
@@ -42,7 +44,7 @@ assert os.path.isfile(checkpoint_path), "Checkpoint file not exist"
 print(f'''Predicting info:
         Reading images from: {img_path}
         Reading the checkpoint from: {checkpoint_path}
-        Images will be save in output directory: {output_path}
+        The output directory: {output_path}
 ''') 
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -69,6 +71,7 @@ dataset_pred.imgs
 for idx, (img,img_info) in enumerate(data_loader_pred):
     img_name = dataset_pred.imgs[idx]
         
+    print("img info++++++++++",img_info)
     img = img.to(device)  
     out = model(img)
     
@@ -86,6 +89,9 @@ for idx, (img,img_info) in enumerate(data_loader_pred):
     if scale!=1:
         seg = cv2.resize(seg, (img_info['w'].item(),img_info['h'].item()),
                 interpolation = cv2.INTER_NEAREST )
+    
     # print(os.path.join(output_path,img_name))
     cv2.imwrite( os.path.join(output_path,img_name),seg)
+
+    cv2.imwrite( os.path.join(output_vis_path,img_name), np.interp(seg, [0, np.max(seg)],[1,255]) )
     #  np.interp(img[0].cpu().detach().numpy().transpose(1, 2, 0),[0,1],[1,255]).astype('uint8'))
