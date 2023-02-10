@@ -31,8 +31,8 @@ img_path = config["DIR"]["image_dir"]
 output_vis_path =config["DIR"]["output_vis_path"]
 checkpoint_path = config["DIR"]["checkpoint_path"]
 output_path = config["DIR"]["output_path"]
+scale = int(config["PARAMS"]["scale"])
 
-scale = 20
 
 Path(output_path).mkdir(parents=True, exist_ok=True)
 Path(output_vis_path).mkdir(parents=True, exist_ok=True)
@@ -71,7 +71,7 @@ dataset_pred.imgs
 for idx, (img,img_info) in enumerate(data_loader_pred):
     img_name = dataset_pred.imgs[idx]
         
-    print("img info++++++++++",img_info)
+    # print("img info++++++++++",img_info)
     img = img.to(device)  
     out = model(img)
     
@@ -93,5 +93,5 @@ for idx, (img,img_info) in enumerate(data_loader_pred):
     # print(os.path.join(output_path,img_name))
     cv2.imwrite( os.path.join(output_path,img_name),seg)
 
-    cv2.imwrite( os.path.join(output_vis_path,img_name), np.interp(seg, [0, np.max(seg)],[1,255]) )
+    cv2.imwrite( os.path.join(output_vis_path,img_name), np.interp(seg, [0, np.max(seg)],[1,255]).astype('uint8')  )
     #  np.interp(img[0].cpu().detach().numpy().transpose(1, 2, 0),[0,1],[1,255]).astype('uint8'))

@@ -25,7 +25,7 @@ Please change the `train_config.ini`, for example:
 
 Run `python train.py train_config.ini` in the anaconda prompt. You can also create your own configuration file and run `python train.py <config name>.ini` 
 
-By default, the training log (e.g. training loss and validation loss) will be saved in the `./logs` folder. You can check the logs by running `tensorboard --logdir=log` in the anaconda prompt. After running tensorboard successfully, use browse to open the address (the default should be http://localhost:6006/) shown in the prompt. You can then check and compare the different training runs. A log is named `<month and data>_<time>_<name of the computer>`.
+By default, the training log (e.g. training loss and validation loss) will be saved in the `./runs` folder. You can check the logs by running `tensorboard --logdir=runs` in the anaconda prompt. After running tensorboard successfully, use browse to open the address (the default should be http://localhost:6006/) shown in the prompt. You can then check and compare the different training runs. A log is named `<month and data>_<time>_<name of the computer>`.
 
 Current models:
 - U-net
@@ -39,7 +39,7 @@ Run `python predict.py pred_config.ini` in the anaconda prompt. You can also cre
 
 The output masks will be saved in the `output_path` of the configuration file. The mask's pixel values are: 0 - background, 1 - first class; 2- second class; n- nth class. Therefore, viewing a mask using the default image viewer of Windows will only see a black image. It's recommended to view the mask with tools such as ImageJ.
 
-TODO: visualise masks with better colours.
+Output masks with better visualization will be save in the `output_vis_path`.
 
 
 ## Jupyter notebook version

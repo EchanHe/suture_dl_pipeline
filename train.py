@@ -149,8 +149,8 @@ if model_name == "unet" and "UNET" in config:
 
 # Read and init datasets
 dataset = seg_data.segDataset(img_path = img_path, 
-    mask_path = mask_path,
-    scale=20)
+    mask_path = mask_path, n_classes=n_classes,
+    scale=scale)
 
 # Split and create dataloader
 l=dataset.__len__()
@@ -252,7 +252,7 @@ print(
 
 
 ### Begin training ###
-writer = SummaryWriter(log_dir)
+writer = SummaryWriter()
 
 for epoch in range(1, epochs + 1):
     model.train()
@@ -276,7 +276,7 @@ for epoch in range(1, epochs + 1):
         if model_name =="deeplab":
             masks_pred = masks_pred['out']
 
-        print(true_masks.shape, masks_pred.shape)
+        print(images.shape, true_masks.shape, masks_pred.shape)
         if model.n_classes == 1:
             loss = criterion(masks_pred.squeeze(1), true_masks.float())
             loss += dice_loss(F.sigmoid(masks_pred.squeeze(1)), true_masks.float(), multiclass=False)

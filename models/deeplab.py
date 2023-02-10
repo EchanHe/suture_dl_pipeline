@@ -12,8 +12,8 @@ def get_deeplab(outputchannels):
     model = models.segmentation.deeplabv3_resnet101(pretrained=True,
                                                     progress=True)
     
-    for i,param in enumerate(model.parameters()):
-        param.requires_grad = False
+    # for i,param in enumerate(model.parameters()):
+    #     param.requires_grad = False
     model.classifier = DeepLabHead(2048, outputchannels)
     # Set the model in training mode
     # model.train()

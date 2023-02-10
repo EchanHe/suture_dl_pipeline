@@ -98,11 +98,17 @@ class segDataset(torch.utils.data.Dataset):
         # load images
         img_name_path = os.path.join(self.img_path, self.imgs[idx])
         # PIL read and resize img (RGB)
-        img = Image.open(img_name_path).convert("RGB")
-        w,h = img.size   
+        # img = Image.open(img_name_path).convert("RGB")
+        img = cv2.imread(img_name_path, cv2.IMREAD_COLOR )
+
+        # w,h = img.size 
+
+        h, w = img.shape[:2] 
         w_resized = int(w//self.scale)     
         h_resized = int(h//self.scale)     
-        img = img.resize(( w_resized, h_resized))
+
+        # img = img.resize(( w_resized, h_resized))
+        img = cv2.resize(img, (w_resized, h_resized))
         
         if not self.is_train:
             img_info={}
@@ -131,8 +137,8 @@ class segDataset(torch.utils.data.Dataset):
 
                 mask_temp = np.zeros((h_mask,w_mask,self.n_classes))
                 for i_class in range(self.n_classes):
-                    mask_temp[...,i_class] = np.where(mask == i_class, mask_temp[...,i_class], 1)
-                    mask_temp[...,i_class] = np.where(mask != i_class, mask_temp[...,i_class], 1)
+                    mask_temp[...,i_class] = np.where(mask == i_class, 1, mask_temp[...,i_class])
+                    # mask_temp[...,i_class] = np.where(mask != i_class, mask_temp[...,i_class], 1)
             
             else:
                 # print("""
@@ -173,7 +179,7 @@ class segDataset(torch.utils.data.Dataset):
 
 
         img_tensor = self.to_tensor(img)
-
+        # img_tensor  = torch.from_numpy(img)
         # Customised transformation.
         # if self.transforms is not None:
         #     img, mask = self.transforms(img, mask)
