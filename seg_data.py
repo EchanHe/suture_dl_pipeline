@@ -52,7 +52,7 @@ class segDataset(torch.utils.data.Dataset):
     """Dataset class for segmentation
     """    
     def __init__(self, img_path, mask_path=None, df_path=None, is_train=True,transforms=None,
-     n_classes = None,scale=1):
+     n_classes = None,scale=1, start_class_i = 0):
         """Init function
 
         Args:
@@ -72,6 +72,8 @@ class segDataset(torch.utils.data.Dataset):
         self.n_classes = n_classes
         
         self.is_train=is_train
+
+        self.start_class_i = start_class_i
         # load all image files, sorting them to
         # ensure that they are aligned
         self.img_path = img_path
@@ -137,7 +139,9 @@ class segDataset(torch.utils.data.Dataset):
 
                 mask_temp = np.zeros((h_mask,w_mask,self.n_classes))
                 for i_class in range(self.n_classes):
-                    mask_temp[...,i_class] = np.where(mask == i_class, 1, mask_temp[...,i_class])
+         
+                    mask_temp[...,i_class] = np.where(mask == i_class + self.start_class_i, 1, mask_temp[...,i_class])
+
                     # mask_temp[...,i_class] = np.where(mask != i_class, mask_temp[...,i_class], 1)
             
             else:
