@@ -117,6 +117,7 @@ mask_path =config["DIR"]["mask_dir"]
 checkpoint_path = config["DIR"]["checkpoint_path"]
 log_dir = config["DIR"]["log_dir"]
 
+start_class_i = int(config["PARAMS"].get('start_class_i',0))
 model_name = config["PARAMS"]['model']
 scale = int(config["PARAMS"]["scale"])
 
@@ -148,23 +149,23 @@ if model_name == "unet" and "UNET" in config:
 
 
 # Read and init datasets
-dataset = seg_data.segDataset(img_path = img_path, 
+dataset_whole = seg_data.segDataset(img_path = img_path, 
     mask_path = mask_path, n_classes=n_classes,
-    scale=scale)
+    scale=scale , start_class_i = start_class_i)
 
 # Split and create dataloader
-l=dataset.__len__()
+l=dataset_whole.__len__()
 torch.manual_seed(1)
-indices = torch.randperm(len(dataset)).tolist()
-dataset = torch.utils.data.Subset(dataset, indices[:-int(np.ceil(l*val_percent/100))])
-dataset_val = torch.utils.data.Subset(dataset, indices[int(-np.ceil(l*val_percent/100)):])
+indices = torch.randperm(len(dataset_whole)).tolist()
+dataset = torch.utils.data.Subset(dataset_whole, indices[:-int(np.ceil(l*val_percent/100))])
+dataset_val = torch.utils.data.Subset(dataset_whole, indices[int(-np.ceil(l*val_percent/100)):])
 
 
 train_loader = torch.utils.data.DataLoader(dataset, batch_size=batch_size,
                                         shuffle=True, num_workers=0, pin_memory=True)
 
 
-test_loader = torch.utils.data.DataLoader(dataset_val, batch_size=batch_size,
+test_loader = torch.utils.data.DataLoader(dataset_val, batch_size=1,
                                         shuffle=False, num_workers=0, pin_memory=True)
 
 print(f'''Dataset info:
@@ -174,6 +175,8 @@ print(f'''Dataset info:
         Dataset length: {l}
         Validation set percentage: {val_percent}
         Batch size: {batch_size}
+        Training set: {dataset.__len__()} images
+        Validation set: {dataset_val.__len__()} images
     ''')
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
