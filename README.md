@@ -13,6 +13,10 @@ Setup a virtual environment in conda and install all the required libraries (lib
 
 Activate the installed environment (default environment name is torch): `conda activate torch`
 
+## Preprocessing images
+
+Batch processing images in `process_training_set.ipynb`.
+
 ## Input images and input labels
 
 Input images need to be all saved in one folder. The input labels (masks) need to be save in another folder, and a mask should be named same as to its corresponding image.
