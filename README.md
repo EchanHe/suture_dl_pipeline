@@ -2,7 +2,7 @@
 
 This pipeline aims to let people test different Deep Learning models on how to segment cranial sutures from micro CT scans of mammal skulls. Users can test different models and configurations (e.g. model hyper-parameters), and visualise the training and predicting process.
 
-## Installaltiaion
+## Installation
 
 Install anaconda python: https://www.anaconda.com/products/distribution
 
@@ -13,14 +13,15 @@ Setup a virtual environment in conda and install all the required libraries (lib
 
 Activate the installed environment (default environment name is torch): `conda activate torch`
 
-## Preprocessing images
-
-Batch processing images in `process_training_set.ipynb`.
 
 ## Input images and input labels
 
-Input images need to be all saved in one folder. The input labels (masks) need to be save in another folder, and a mask should be named same as to its corresponding image.
+Input images need to be all saved in one folder. The input labels (masks) need to be save in another folder, and a mask should be named same as to its corresponding image. Users should make sure that their datasets follow the data setting. A dataset need to be manipulated to follow the setting. A Jupyter notebook file `process_training_set.ipynb` can help with preparing users' datasets.
 
+## Preprocessing images
+
+
+The `process_training_set.ipynb` file allows users to batch process images and annotations. Currently, it supports renaming, copy files, padding. 
 
 ## Use it for training
 Please change the `train_config.ini`, for example: 
