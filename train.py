@@ -61,12 +61,14 @@ def dice_loss(input: Tensor, target: Tensor, multiclass: bool = False):
 
 def evaluate(model,model_name, dataloader, device, amp = True):
     """Evaluate the validation set
+
+    Return validation score (dice score).
     
     """
     model.eval()
     num_val_batches = len(dataloader)
     dice_score = 0
-
+    valid_loss = 0
     # iterate over the validation set
     with torch.autocast(device.type if device.type != 'mps' else 'cpu', enabled=amp):
         for batch in dataloader:
@@ -84,19 +86,30 @@ def evaluate(model,model_name, dataloader, device, amp = True):
 
             if model.n_classes == 1:
                 assert mask_true.min() >= 0 and mask_true.max() <= 1, 'True mask indices should be in [0, 1]'
+                valid_loss += criterion(masks_pred.squeeze(1), mask_true.float())
+
                 mask_pred = (F.sigmoid(mask_pred) > 0.5).float()
                 # compute the Dice score
                 dice_score += dice_coeff(mask_pred, mask_true, reduce_batch_first=False)
             else:
                 assert mask_true.min() >= 0 and mask_true.max() < model.n_classes, 'True mask indices should be in [0, n_classes['
                 # convert to one-hot format
+                valid_loss += criterion(masks_pred, true_masks)
                 mask_true = F.one_hot(mask_true.argmax(dim=1).to(torch.long), model.n_classes).permute(0, 3, 1, 2).float()
                 mask_pred = F.one_hot(mask_pred.argmax(dim=1), model.n_classes).permute(0, 3, 1, 2).float()
                 # compute the Dice score, ignoring background
                 dice_score += multiclass_dice_coeff(mask_pred[:, 1:], mask_true[:, 1:], reduce_batch_first=False)
 
+            
+            # Per-class dice score
+            per_class_dice_score =[]
+            for i in range(model.n_classes):
+                per_class_dice_score.append(dice_coeff(mask_pred[:,i,...], 
+                                                       mask_true[:,i,...], 
+                                                       reduce_batch_first=False))
+
     model.train()
-    return dice_score / max(num_val_batches, 1)
+    return dice_score / max(num_val_batches, 1) , valid_loss/ max(num_val_batches, 1), per_class_dice_score
 
 ## Read the config
 def read_ini(file_path):
@@ -273,13 +286,13 @@ for epoch in range(1, epochs + 1):
         images = images.to(device=device, dtype=torch.float32, memory_format=torch.channels_last)
         true_masks = true_masks.to(device=device, dtype=torch.float32)
         
-
+        print(images.shape)
         masks_pred = model(images)
 
         if model_name =="deeplab":
             masks_pred = masks_pred['out']
 
-        print(images.shape, true_masks.shape, masks_pred.shape)
+        # print(images.shape, true_masks.shape, masks_pred.shape)
         if model.n_classes == 1:
             loss = criterion(masks_pred.squeeze(1), true_masks.float())
             loss += dice_loss(F.sigmoid(masks_pred.squeeze(1)), true_masks.float(), multiclass=False)
@@ -308,8 +321,15 @@ for epoch in range(1, epochs + 1):
 
     
     # Validation stage
-    val_score = evaluate(model,model_name, test_loader, device)
-    writer.add_scalar('Loss/Valid', loss, epoch)
+    val_score,val_loss,per_class_dice_score = evaluate(model,model_name, test_loader, device)
+    # writer.add_scalar('Loss/Valid', epoch_loss, epoch)
+    writer.add_scalar('Loss/Valid' , val_loss, epoch)
+    writer.add_scalar('Dice score/average' , val_score, epoch)
+
+    for i_class in range(len(per_class_dice_score)):
+        writer.add_scalar('Dice score/class {}'.format(i_class + 1) ,
+                           per_class_dice_score[i_class], epoch)
+
     scheduler.step(val_score)    
 
  

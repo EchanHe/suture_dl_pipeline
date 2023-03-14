@@ -31,6 +31,8 @@ img_path = config["DIR"]["image_dir"]
 output_vis_path =config["DIR"]["output_vis_path"]
 checkpoint_path = config["DIR"]["checkpoint_path"]
 output_path = config["DIR"]["output_path"]
+
+start_class_i = int(config["PARAMS"].get('start_class_i',0))
 scale = int(config["PARAMS"]["scale"])
 
 
@@ -56,7 +58,7 @@ print(f'''System info:
 ''')
 
 
-dataset_pred = seg_data.segDataset(img_path = img_path,scale=scale,is_train=False)
+dataset_pred = seg_data.segDataset(img_path = img_path,scale=scale,is_train=False, start_class_i = start_class_i)
 data_loader_pred = torch.utils.data.DataLoader(dataset_pred, batch_size=1, shuffle=False)
 
 
