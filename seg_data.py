@@ -6,6 +6,17 @@ from PIL import Image
 import torchvision.transforms as T
 import torch
 import torch.utils.data
+import albumentations as A
+
+
+album_transform = A.Compose([
+    A.HorizontalFlip(p=0.5),
+    A.RandomBrightnessContrast(),
+    A.RandomContrast(),
+    A.RandomGamma(),
+    A.Rotate()
+])
+
 
 
 def contour_to_seg(seg,contour_coords,value, scale):
@@ -52,7 +63,7 @@ class segDataset(torch.utils.data.Dataset):
     """Dataset class for segmentation
     """    
     def __init__(self, img_path, mask_path=None, df_path=None, is_train=True,transforms=None,
-     n_classes = None,scale=1, start_class_i = 0):
+     n_classes = None,scale=1, start_class_i = 0, augmentation = True):
         """Init function
 
         Args:
@@ -64,7 +75,7 @@ class segDataset(torch.utils.data.Dataset):
             n_classes: number of classes, the default is 2 (fore ground and back ground)
         """        
         
-
+        self.augmentation = augmentation
         self.transforms = transforms
         self.scale = scale
         self.to_tensor = T.ToTensor()
@@ -129,6 +140,10 @@ class segDataset(torch.utils.data.Dataset):
             w_mask,h_mask = mask.size
             mask = np.array(mask)
 
+            if self.augmentation:
+                transformed = album_transform(image=img, mask=mask)
+                img = transformed['image']
+                mask = transformed['mask']
 
             if self.n_classes!=None:
                 # print("""

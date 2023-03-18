@@ -129,6 +129,7 @@ img_path = config["DIR"]["image_dir"]
 mask_path =config["DIR"]["mask_dir"]
 checkpoint_path = config["DIR"]["checkpoint_path"]
 log_dir = config["DIR"]["log_dir"]
+saved_model = config["DIR"].get('saved_model',None)
 
 start_class_i = int(config["PARAMS"].get('start_class_i',0))
 model_name = config["PARAMS"]['model']
@@ -172,7 +173,7 @@ torch.manual_seed(1)
 indices = torch.randperm(len(dataset_whole)).tolist()
 dataset = torch.utils.data.Subset(dataset_whole, indices[:-int(np.ceil(l*val_percent/100))])
 dataset_val = torch.utils.data.Subset(dataset_whole, indices[int(-np.ceil(l*val_percent/100)):])
-
+dataset_val.dataset.augmentation=False
 
 train_loader = torch.utils.data.DataLoader(dataset, batch_size=batch_size,
                                         shuffle=True, num_workers=0, pin_memory=True)
@@ -206,11 +207,14 @@ print(f'''System info:
 
 
 
-### Unet ###
-if model_name =='unet':
-    model = UNet(n_channels=3, n_classes=n_classes, bilinear=bilinear)
-elif model_name =="deeplab":
-    model = get_deeplab(n_classes)
+### Network ###
+if saved_model is not None:
+    model = torch.load(saved_model)
+else:
+    if model_name =='unet':
+        model = UNet(n_channels=3, n_classes=n_classes, bilinear=bilinear)
+    elif model_name =="deeplab":
+        model = get_deeplab(n_classes)
     
 # switch NCHW to NHWC
 model = model.to(memory_format=torch.channels_last)
@@ -285,8 +289,7 @@ for epoch in range(1, epochs + 1):
 
         images = images.to(device=device, dtype=torch.float32, memory_format=torch.channels_last)
         true_masks = true_masks.to(device=device, dtype=torch.float32)
-        
-        print(images.shape)
+
         masks_pred = model(images)
 
         if model_name =="deeplab":
@@ -336,7 +339,12 @@ for epoch in range(1, epochs + 1):
     Path(checkpoint_path).mkdir(parents=True, exist_ok=True)
     state_dict = model.state_dict()
     # state_dict['mask_values'] = dataset.mask_values
-    torch.save(model, str(checkpoint_path + '/{}_checkpoint_epoch{}.pth'.format(model_name, epoch)))
+    if saved_model is None:
+        torch.save(model, str(checkpoint_path + '/{}_checkpoint_epoch{}.pth'.format(model_name, epoch)))
+    else:
+        saved_model_name = saved_model.split("/")[-1].split(".")[0]
+        torch.save(model, str(checkpoint_path + '/{}_plus_epoch{}.pth'.format(saved_model_name, epoch)))
+        
     print(f'Checkpoint {epoch} saved! in {checkpoint_path}')
 writer.flush()
 writer.close()
