@@ -1,0 +1,11 @@
+checkpoint/
+logs/
+runs/
+vis/
+output/
+tensorboard_test/
+data/
+plots/
+result/
+data_for*/
+augmentation_test/
