@@ -69,6 +69,7 @@ def evaluate(model,model_name, dataloader, device, amp = True):
     num_val_batches = len(dataloader)
     dice_score = 0
     valid_loss = 0
+    criterion = nn.CrossEntropyLoss()
     # iterate over the validation set
     with torch.autocast(device.type if device.type != 'mps' else 'cpu', enabled=amp):
         for batch in dataloader:
@@ -131,6 +132,8 @@ checkpoint_path = config["DIR"]["checkpoint_path"]
 log_dir = config["DIR"]["log_dir"]
 saved_model = config["DIR"].get('saved_model',None)
 
+is_img_aug = config["img_aug"].get('saved_model',False)
+
 start_class_i = int(config["PARAMS"].get('start_class_i',0))
 model_name = config["PARAMS"]['model']
 scale = int(config["PARAMS"]["scale"])
@@ -143,12 +146,6 @@ val_percent = int(config["PARAMS"]['val_percent'])
 n_classes = int(config["PARAMS"].get('n_classes',False))
 # Class weight, if not specified, assign None
 class_weights = config["PARAMS"].get('class_weights',False)
-if class_weights:
-    
-    class_weights = eval(class_weights)
-    assert len(class_weights) == n_classes, "The length of class weights: {} should equal to the number of classes: {}".format(len(class_weights),n_classes)
-    class_weights_tensor = torch.tensor(class_weights)
-    class_weights = True
 
 epochs = int(config["PARAMS"]['epochs'])
 
@@ -173,6 +170,8 @@ torch.manual_seed(1)
 indices = torch.randperm(len(dataset_whole)).tolist()
 dataset = torch.utils.data.Subset(dataset_whole, indices[:-int(np.ceil(l*val_percent/100))])
 dataset_val = torch.utils.data.Subset(dataset_whole, indices[int(-np.ceil(l*val_percent/100)):])
+
+dataset.dataset.augmentation=is_img_aug
 dataset_val.dataset.augmentation=False
 
 train_loader = torch.utils.data.DataLoader(dataset, batch_size=batch_size,
@@ -227,14 +226,33 @@ scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'max', patience=5)  
 # grad_scaler = torch.cuda.amp.GradScaler(enabled=amp)
 
 # Loss function
-if class_weights:
+# if class_weights and class_weights!='auto':
+#     class_weights = eval(class_weights)
+#     assert len(class_weights) == n_classes, "The length of class weights: {} should equal to the number of classes: {}".format(len(class_weights),n_classes)
+#     class_weights_tensor = torch.tensor(class_weights)
+    
+#     print("Using class weight in loss: {}".format(class_weights_tensor))
+#     class_weights_tensor = class_weights_tensor.to(device=device)
+#     criterion = nn.CrossEntropyLoss(weight= class_weights_tensor) if n_classes > 1 else nn.BCEWithLogitsLoss()
+# # Loss function with class weight
+# else:
+#     print("No class weight in loss")
+#     criterion = nn.CrossEntropyLoss() if n_classes > 1 else nn.BCEWithLogitsLoss()
+if class_weights and class_weights!='auto':
+    class_weights = eval(class_weights)
+    assert len(class_weights) == n_classes, "The length of class weights: {} should equal to the number of classes: {}".format(len(class_weights),n_classes)
+    class_weights_tensor = torch.tensor(class_weights)
+    
     print("Using class weight in loss: {}".format(class_weights_tensor))
     class_weights_tensor = class_weights_tensor.to(device=device)
-    criterion = nn.CrossEntropyLoss(weight= class_weights_tensor) if n_classes > 1 else nn.BCEWithLogitsLoss()
-# Loss function with class weight
+    criterion = nn.CrossEntropyLoss(weight= class_weights_tensor) 
+elif class_weights=='auto':
+    print("Use auto-weighting")
+    criterion = nn.BCEWithLogitsLoss(reduction="none")
 else:
     print("No class weight in loss")
     criterion = nn.CrossEntropyLoss() if n_classes > 1 else nn.BCEWithLogitsLoss()
+
 
 
 
@@ -295,12 +313,26 @@ for epoch in range(1, epochs + 1):
         if model_name =="deeplab":
             masks_pred = masks_pred['out']
 
+        if class_weights == 'auto':
+            class_weights_tensor = torch.Tensor([torch.sum(true_masks[:,c_i,...]==1) for c_i in range(true_masks.shape[1])])
+            class_weights_tensor = torch.nn.functional.normalize(class_weights_tensor, p=1.0, dim = 0)
+            class_weights_tensor = class_weights_tensor.to(device=device, dtype=torch.float32)
         # print(images.shape, true_masks.shape, masks_pred.shape)
         if model.n_classes == 1:
-            loss = criterion(masks_pred.squeeze(1), true_masks.float())
+            # Weights can be added for the criterion
+            if class_weights == 'auto':
+                loss = criterion(masks_pred.squeeze(1), true_masks.float() )
+                
+                loss = torch.mean(class_weights_tensor[None,:,None,None] * loss)
+            else:    
+                loss = criterion(masks_pred.squeeze(1), true_masks.float())
             loss += dice_loss(F.sigmoid(masks_pred.squeeze(1)), true_masks.float(), multiclass=False)
         else:
-            loss = criterion(masks_pred, true_masks)
+            if class_weights == 'auto':
+                loss = criterion(masks_pred, true_masks)
+                loss = torch.mean(class_weights_tensor[None,:,None,None] * loss)
+            else: 
+                loss = criterion(masks_pred, true_masks)
             loss += dice_loss(
                 F.softmax(masks_pred, dim=1).float(),
                 F.one_hot(true_masks.argmax(dim=1), model.n_classes).permute(0, 3, 1, 2).float(),

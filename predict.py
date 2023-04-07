@@ -11,8 +11,10 @@ import torch
 import torchvision
 
 import seg_data
-
-
+from torchvision.utils import draw_segmentation_masks
+import torchvision.transforms.functional as F
+from PIL import Image 
+from torchvision.io import read_image
 
 ## Read the config
 def read_ini(file_path):
@@ -71,6 +73,7 @@ dataset_pred.imgs
 
 ## Iterate through the images and save them to the directory.
 for idx, (img,img_info) in enumerate(data_loader_pred):
+    
     img_name = dataset_pred.imgs[idx]
         
     # print("img info++++++++++",img_info)
@@ -79,10 +82,17 @@ for idx, (img,img_info) in enumerate(data_loader_pred):
     
     if "deeplab" in checkpoint_path:
         out = out['out']
+
+    
+    mask_temp = out[0].argmax(0) ==1
+    
+    # img_with_mask = draw_segmentation_masks(Image.open(os.path.join(img_path, img_name)).PIL_TO_TENSOR(),
+    #                                         masks = mask_temp, alpha=0.5)
+    
+    # img_with_mask = img_with_mask.detach()
+    # img_with_mask = F.to_pil_image(img_with_mask)
+
     out_temp = out.cpu().detach().numpy()
-
-
-
     seg= out_temp[0].transpose(1, 2, 0).argmax(2)
     
     # output_mask = np.zeros(seg.shape).astype('uint8')
@@ -93,7 +103,32 @@ for idx, (img,img_info) in enumerate(data_loader_pred):
                 interpolation = cv2.INTER_NEAREST )
     
     # print(os.path.join(output_path,img_name))
-    cv2.imwrite( os.path.join(output_path,img_name),seg)
+    cv2.imwrite( os.path.join(output_path,img_name),seg.astype('uint8'))
+
 
     cv2.imwrite( os.path.join(output_vis_path,img_name), np.interp(seg, [0, np.max(seg)],[1,255]).astype('uint8')  )
+    # cv2.imwrite( os.path.join(output_vis_path,img_name), img_with_mask.astype('uint8')  )
+    # img_with_mask.save(os.path.join(output_vis_path,img_name))
+    # img_pil = F.to_pil_image(img[0])
+    # img_with_mask.save(os.path.join(output_vis_path,img_name))
     #  np.interp(img[0].cpu().detach().numpy().transpose(1, 2, 0),[0,1],[1,255]).astype('uint8'))
+    
+    
+    # img_cv = cv2.imread(os.path.join(img_path, img_name))
+    
+    # alpha = 0.5 # set your desired alpha value
+
+    # # create the overlay mask
+    # img_cv = img.cpu().detach().numpy()
+
+    # img_cv= img_cv[0].transpose(1, 2, 0).astype('uint8')
+    
+    # print(img_cv.shape)
+    
+    # overlay_mask = np.zeros_like(img_cv)
+    # overlay_mask[seg==1] = (0, 0, 255) # set the color of the mask (here, red)
+
+    # # # apply the mask to the image
+    # result = cv2.addWeighted(img_cv, 1 - alpha, overlay_mask, alpha, 0)
+
+    # cv2.imwrite( os.path.join(output_vis_path,img_name), result  )
