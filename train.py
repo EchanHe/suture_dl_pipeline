@@ -132,7 +132,7 @@ checkpoint_path = config["DIR"]["checkpoint_path"]
 log_dir = config["DIR"]["log_dir"]
 saved_model = config["DIR"].get('saved_model',None)
 
-is_img_aug = config["img_aug"].get('saved_model',False)
+is_img_aug = config["img_aug"].get('img_aug',False)
 
 start_class_i = int(config["PARAMS"].get('start_class_i',0))
 model_name = config["PARAMS"]['model']
