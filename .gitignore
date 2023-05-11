@@ -9,3 +9,4 @@ plots/
 result/
 data_for*/
 augmentation_test/
+models/__pycache__/
